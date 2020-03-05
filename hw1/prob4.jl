@@ -17,13 +17,17 @@ function apoapsis_change(r1::Float64, r2::Float64, μ::Float64)
   return ΔV
 end
 
-function plane_change(r1::Float64, r2::Float64, μ::Float64, Δi::Float64)
-  ra = r2 > r1 ? r2 : r1
-  rp = r2 > r1 ? r1 : r2
-  a = (ra+rp)/2
-  e = (ra-rp)/(ra+rp)
-  n = √(μ/a^3)
-  return (2*sin(Δi/2)*√(1-e^2)*n*a)/(1+e)
+function plane_change(r1::Float64, 
+                      r2::Float64, 
+                      Δi::Float64, 
+                      μ::Float64) 
+  if r1 == r2
+    v = √(μ/r1)
+    return 2*v*sin(Δi/2)
+  else
+    v = √((2*μ*r2)/((r1+r2)*r1))
+    return 2*v*sin(Δi/2)
+  end
 end
 
 function total_manuever(r1::Float64, r2::Float64,
@@ -31,19 +35,19 @@ function total_manuever(r1::Float64, r2::Float64,
   if Δ_i1 + Δ_i3 > Δ_i
     return NaN
   else
-    plane1 = plane_change(r1, r2, μ, Δ_i1)
-    raise1 = apoapsis_change(r1, r2, μ)
     Δ_i2 = Δ_i - Δ_i1 - Δ_i3
-    plane2 = plane_change(r1, r2, μ, Δ_i2)
+    raise1 = apoapsis_change(r1, r2, μ)
+    plane1 = plane_change(r1, r2, Δ_i1, μ)
+    plane2 = plane_change(r2, r1, Δ_i2, μ)
+    plane3 = plane_change(r1, r2, Δ_i3, μ)
     lower3 = apoapsis_change(r2, r1, μ)
-    plane3 = plane_change(r1, r2, μ, Δ_i3)
     return plane1 + raise1 + plane2 + lower3 + plane3
   end
 end
 
 function plot_maneuver(r1::Float64, r2::Float64, Δ_i::Float64,  μ::Float64)
   N = 100
-  node1_inc = node3_inc = collect(range(0, length=N, stop=Δ_i))
+  node1_inc = node3_inc = collect(range(0, length=N, stop=0.1))
   z = zeros(Float64, N, N)
   for i in 1:N
     for j in 1:N
